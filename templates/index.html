@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CyberTrace AI - Command Center</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Leaflet CSS & JS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@0.263.0/dist/umd/lucide.js"></script>
+
+    <!-- jsPDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <style>
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        .pulse-red { animation: pulse 1.5s infinite; }
+        @keyframes pulse {
+            0% { transform: scale(0.98); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+            100% { transform: scale(0.98); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans h-screen flex flex-col overflow-hidden">
+
+    <!-- Header Navigation -->
+    <header class="bg-slate-900 border-b border-slate-800 px-6 py-3 flex justify-between items-center z-10">
+        <div class="flex items-center space-x-3">
+            <div class="p-2 bg-red-500/10 border border-red-500/30 rounded-lg text-red-500">
+                <i data-lucide="shield-alert" class="w-6 h-6"></i>
+            </div>
+            <div>
+                <h1 class="font-bold text-lg text-slate-100 tracking-wide flex items-center">
+                    CyberTrace AI
+                    <span class="text-[10px] bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 px-2 py-0.5 rounded-full ml-2">Random Forest Classification Engine</span>
+                </h1>
+                <p class="text-xs text-slate-400">Predictive Cybercrime Cash-Out & Location Analytics Platform</p>
+            </div>
+        </div>
+        <div class="flex items-center space-x-4">
+            <div class="text-right">
+                <div class="text-xs text-slate-400">ML Engine Status</div>
+                <div class="text-xs text-emerald-400 flex items-center justify-end">
+                    <span class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse mr-1.5"></span> Trained on 800 Synthetic Incidents
+                </div>
+            </div>
+            <button onclick="dispatchPatrol()" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-xs font-semibold flex items-center space-x-2 transition shadow-lg shadow-red-950">
+                <i data-lucide="siren" class="w-4 h-4"></i>
+                <span>Simulate Patrol Dispatch</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Grid Layout -->
+    <main class="flex-1 grid grid-cols-12 overflow-hidden">
+
+        <!-- Left Column -->
+        <aside class="col-span-3 bg-slate-900 border-r border-slate-800 p-4 overflow-y-auto custom-scrollbar flex flex-col space-y-4">
+            
+            <div class="bg-slate-950 border border-slate-800 rounded-xl p-4">
+                <h2 class="text-xs font-bold text-slate-200 mb-2 flex items-center justify-between">
+                    <span class="flex items-center"><i data-lucide="file-plus" class="w-4 h-4 text-cyan-400 mr-1.5"></i> Incident Parameters</span>
+                    <span class="text-[10px] text-cyan-400">Click map to pin spot</span>
+                </h2>
+                <form id="crimeForm" onsubmit="runPrediction(event)" class="space-y-2.5">
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="text-[11px] text-slate-400">Victim Lat</label>
+                            <input type="text" id="vLat" value="13.0500" class="w-full bg-slate-900 border border-slate-700 text-xs text-slate-100 rounded p-1.5 focus:border-cyan-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="text-[11px] text-slate-400">Victim Lng</label>
+                            <input type="text" id="vLng" value="80.2400" class="w-full bg-slate-900 border border-slate-700 text-xs text-slate-100 rounded p-1.5 focus:border-cyan-500 outline-none">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="text-[11px] text-slate-400">Fraud Amount (₹)</label>
+                            <input type="number" id="fraudAmount" value="75000" class="w-full bg-slate-900 border border-slate-700 text-xs text-slate-100 rounded p-1.5 focus:border-cyan-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="text-[11px] text-slate-400">Incident Hour (0-23)</label>
+                            <input type="number" id="incidentHour" min="0" max="23" value="14" class="w-full bg-slate-900 border border-slate-700 text-xs text-slate-100 rounded p-1.5 focus:border-cyan-500 outline-none">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="text-[11px] text-slate-400">Scam Type</label>
+                        <select id="scamType" class="w-full bg-slate-900 border border-slate-700 text-xs text-slate-100 rounded p-1.5 focus:border-cyan-500 outline-none">
+                            <option value="phishing">Phishing / Banking Cyber Fraud</option>
+                            <option value="investment">Fake High-Yield Investment Scam</option>
+                            <option value="parttime">Part-Time Task Job Fraud</option>
+                            <option value="vishing">Vishing / Voice OTP Call Scam</option>
+                        </select>
+                    </div>
+
+                    <button type="submit" class="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-semibold py-2 rounded text-xs transition flex justify-center items-center space-x-1 mt-2">
+                        <i data-lucide="cpu" class="w-4 h-4"></i>
+                        <span>Execute ML Prediction</span>
+                    </button>
+                </form>
+            </div>
+
+            <!-- ML Probabilities List -->
+            <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 flex-1 flex flex-col">
+                <h2 class="text-xs font-bold text-slate-200 mb-2 flex items-center">
+                    <i data-lucide="radar" class="w-4 h-4 text-red-400 mr-1.5"></i> Ranked High-Risk ATM Locations
+                </h2>
+                <div id="riskList" class="space-y-2 overflow-y-auto custom-scrollbar flex-1 max-h-48">
+                    <!-- Dynamic Items -->
+                </div>
+            </div>
+
+            <!-- Risk Chart -->
+            <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 h-44">
+                <h3 class="text-[11px] font-semibold text-slate-400 mb-1">Top ATM Risk Distribution (%)</h3>
+                <div class="h-32">
+                    <canvas id="riskChart"></canvas>
+                </div>
+            </div>
+
+        </aside>
+
+        <!-- Center Column: Leaflet Map -->
+        <section class="col-span-6 relative bg-slate-950">
+            <div id="map" class="w-full h-full z-0"></div>
+            
+            <div class="absolute top-4 right-4 bg-slate-900/90 backdrop-blur border border-slate-800 p-3 rounded-lg text-xs space-y-1 z-[1000]">
+                <div class="font-bold text-slate-300 mb-1 text-[11px]">Map Indicators Legend</div>
+                <div class="flex items-center space-x-2"><span class="w-3 h-3 bg-cyan-400 rounded-full inline-block"></span> <span>Victim Incident Location</span></div>
+                <div class="flex items-center space-x-2"><span class="w-3 h-3 bg-red-500 rounded-full inline-block"></span> <span>Top Predicted Cash-Out ATM</span></div>
+                <div class="flex items-center space-x-2"><span class="w-3 h-3 bg-blue-500 rounded-full inline-block"></span> <span>Monitored Nearby ATMs</span></div>
+            </div>
+        </section>
+
+        <!-- Right Column -->
+        <aside class="col-span-3 bg-slate-900 border-l border-slate-800 p-4 overflow-y-auto custom-scrollbar flex flex-col space-y-4">
+            
+            <!-- Dynamic Action Strategy -->
+            <div class="bg-slate-950 border border-slate-800 rounded-xl p-4">
+                <h2 class="text-xs font-bold text-slate-200 mb-2 flex items-center text-purple-400">
+                    <i data-lucide="shield-check" class="w-4 h-4 mr-1.5"></i> Recommended Action Strategy
+                </h2>
+                <div id="actionPlanContainer" class="text-xs text-slate-300 space-y-2">
+                    <!-- Dynamic rendering -->
+                </div>
+            </div>
+
+            <!-- Mule Telemetry (Simulated) -->
+            <div class="bg-slate-950 border border-slate-800 rounded-xl p-4">
+                <div class="flex justify-between items-center mb-2">
+                    <h2 class="text-xs font-bold text-slate-200 flex items-center">
+                        <i data-lucide="activity" class="w-4 h-4 text-emerald-400 mr-1.5"></i> Mule Account Telemetry
+                    </h2>
+                    <span class="text-[9px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded border border-slate-700">Simulated Feed</span>
+                </div>
+                <div id="muleNetworkLog" class="space-y-2 text-xs">
+                    <!-- Dynamic Feed -->
+                </div>
+            </div>
+
+            <!-- Download PDF Forensic Report -->
+            <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 mt-auto">
+                <button onclick="generateForensicPDF()" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 py-2 rounded text-xs font-semibold flex justify-center items-center space-x-2 transition">
+                    <i data-lucide="download" class="w-4 h-4 text-cyan-400"></i>
+                    <span>Export Forensic PDF Report</span>
+                </button>
+            </div>
+
+        </aside>
+
+    </main>
+
+    <script>
+        lucide.createIcons();
+
+        let map = L.map('map', { zoomControl: false }).setView([13.0500, 80.2400], 12);
+        
+        // FREE OPENSTREETMAP TILE LAYER (NO API KEY REQUIRED)
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+        let mapMarkers = [];
+        let riskChart = null;
+        let latestPredictions = [];
+
+        map.on('click', function(e) {
+            document.getElementById('vLat').value = e.latlng.lat.toFixed(4);
+            document.getElementById('vLng').value = e.latlng.lng.toFixed(4);
+            runPrediction();
+        });
+
+        async function runPrediction(e) {
+            if (e) e.preventDefault();
+
+            const vLat = parseFloat(document.getElementById('vLat').value);
+            const vLng = parseFloat(document.getElementById('vLng').value);
+            const amount = parseFloat(document.getElementById('fraudAmount').value);
+            const scamType = document.getElementById('scamType').value;
+            const hour = parseInt(document.getElementById('incidentHour').value);
+
+            try {
+                const response = await fetch('/api/predict', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        victim_lat: vLat,
+                        victim_lng: vLng,
+                        amount: amount,
+                        scam_type: scamType,
+                        incident_hour: hour
+                    })
+                });
+
+                if (!response.ok) throw new Error("Backend classification server error.");
+
+                const data = await response.json();
+                latestPredictions = data.predictions;
+
+                // Clear Markers
+                mapMarkers.forEach(m => map.removeLayer(m));
+                mapMarkers = [];
+
+                // Add Victim Point
+                const victimMarker = L.circleMarker([vLat, vLng], {
+                    radius: 9,
+                    color: '#0284c7',
+                    fillColor: '#38bdf8',
+                    fillOpacity: 0.9
+                }).addTo(map).bindPopup("<b>Victim Incident Reported Point</b>").openPopup();
+                mapMarkers.push(victimMarker);
+
+                // Render Sidebar List & Map Markers
+                const riskList = document.getElementById('riskList');
+                riskList.innerHTML = '';
+
+                latestPredictions.slice(0, 7).forEach((atm, idx) => {
+                    const isTop = idx === 0;
+                    
+                    const color = isTop ? '#ef4444' : '#2563eb';
+                    const marker = L.circleMarker([atm.lat, atm.lng], {
+                        radius: isTop ? 12 : 7,
+                        color: color,
+                        fillColor: color,
+                        fillOpacity: 0.8
+                    }).addTo(map).bindPopup(`<b>${atm.name}</b><br>ML Probability: <b>${atm.risk_score}%</b>`);
+                    mapMarkers.push(marker);
+
+                    const card = document.createElement('div');
+                    card.className = `p-2 rounded border ${isTop ? 'bg-red-950/30 border-red-500/50 pulse-red' : 'bg-slate-900 border-slate-800'} flex justify-between items-center`;
+                    card.innerHTML = `
+                        <div>
+                            <div class="font-semibold text-xs text-slate-200">${atm.name}</div>
+                            <div class="text-[10px] text-slate-400">${atm.type}</div>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-xs font-bold ${isTop ? 'text-red-400' : 'text-cyan-400'}">${atm.risk_score}%</span>
+                            <div class="text-[9px] text-slate-500">Probability</div>
+                        </div>
+                    `;
+                    riskList.appendChild(card);
+                });
+
+                // Update Action Plan
+                const topATM = latestPredictions[0];
+                document.getElementById('actionPlanContainer').innerHTML = `
+                    <div class="p-2 bg-slate-900 border-l-2 border-red-500 rounded space-y-1">
+                        <div class="text-slate-200 font-semibold">Primary Target: ${topATM.name}</div>
+                        <div class="text-slate-400 text-[11px]">Location: ${topATM.lat}, ${topATM.lng}</div>
+                        <div class="text-red-400 text-[11px]">ML Score: ${topATM.risk_score}% | Influencer: ${data.top_factor}</div>
+                    </div>
+                    <div class="text-[11px] text-slate-400 space-y-1 pt-1">
+                        <p>• Recommended: Alert police patrol units near <b>${topATM.name}</b>.</p>
+                        <p>• Recommended: Request freeze for connected Mule Account linked to ${scamType} scam.</p>
+                    </div>
+                `;
+
+                // Update Mule Log
+                document.getElementById('muleNetworkLog').innerHTML = `
+                    <div class="p-2 bg-slate-900 border-l-2 border-red-500 rounded">
+                        <div class="text-slate-300 font-medium">Mule Account Tracker (Simulated)</div>
+                        <div class="text-slate-500 text-[10px]">Flagged near ${topATM.name} hub</div>
+                        <div class="text-red-400 text-[10px] mt-0.5">₹${amount.toLocaleString()} Fraud Amount Tracked</div>
+                    </div>
+                `;
+
+                updateChart(latestPredictions.slice(0, 5).map(a => a.name.split('-')[0]), latestPredictions.slice(0, 5).map(a => a.risk_score));
+
+            } catch (err) {
+                alert("API Error: Unable to connect to ML Flask backend. Make sure app.py is running!");
+                console.error(err);
+            }
+        }
+
+        function updateChart(labels, data) {
+            const ctx = document.getElementById('riskChart').getContext('2d');
+            if (riskChart) riskChart.destroy();
+
+            riskChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'ML Probability %',
+                        data: data,
+                        backgroundColor: data.map(v => v > 20 ? '#ef4444' : '#3b82f6'),
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { ticks: { color: '#94a3b8', font: { size: 8 } }, grid: { display: false } },
+                        y: { ticks: { color: '#94a3b8', font: { size: 8 } }, grid: { color: '#1e293b' } }
+                    }
+                }
+            });
+        }
+
+        function dispatchPatrol() {
+            if (latestPredictions.length > 0) {
+                alert(`Simulated: Patrol alert dispatched for area near ${latestPredictions[0].name}`);
+            } else {
+                alert("Run prediction first.");
+            }
+        }
+
+        function generateForensicPDF() {
+            if (!latestPredictions.length) return alert("Run prediction first.");
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            const topATM = latestPredictions[0];
+
+            doc.setFontSize(16);
+            doc.text("CyberTrace AI - Forensic Incident & Risk Assessment", 14, 20);
+
+            doc.setFontSize(10);
+            doc.text(`Generated Date: ${new Date().toLocaleString()}`, 14, 30);
+            doc.text(`Victim Coordinates: ${document.getElementById('vLat').value}, ${document.getElementById('vLng').value}`, 14, 38);
+            doc.text(`Reported Fraud Amount: INR ${document.getElementById('fraudAmount').value}`, 14, 46);
+            doc.text(`Scam Category: ${document.getElementById('scamType').value}`, 14, 54);
+            doc.text(`Incident Hour: ${document.getElementById('incidentHour').value}:00 Hrs`, 14, 62);
+
+            doc.line(14, 68, 196, 68);
+
+            doc.setFontSize(12);
+            doc.text("Top Machine Learning Predicted Cash-Out ATM:", 14, 78);
+            doc.text(`1. ${topATM.name} - ML Risk Probability: ${topATM.risk_score}%`, 14, 88);
+            doc.text(`   Location Coordinates: ${topATM.lat}, ${topATM.lng}`, 14, 96);
+            doc.text(`   Location Category: ${topATM.type}`, 14, 104);
+
+            doc.setFontSize(9);
+            doc.text("Note: This report is generated by CyberTrace AI predictive classifier for Law Enforcement review.", 14, 120);
+
+            doc.save(`CyberTrace_Forensic_Report_${Date.now()}.pdf`);
+        }
+
+        // Run default load
+        runPrediction();
+    </script>
+</body>
+</html>
